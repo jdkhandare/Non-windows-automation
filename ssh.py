@@ -2,11 +2,36 @@ import os
 import subprocess
 from venv import logger
 import paramiko
+from datetime import datetime
 import logging
 from logging.handlers import RotatingFileHandler
-from logging.handlers import HTMLFormatter
+#from logging.handlers import HTMLFormatter
 import sys
 import pdb
+import subprocess
+
+def check_number_of_lines(file_path):
+    try:
+        # Execute the grep command
+        result = subprocess.run(['grep', '-c', '^', file_path], capture_output=True, text=True)
+
+        # Get the number of lines from the output
+        num_lines = int(result.stdout.strip())
+
+        # Perform different actions based on the number of lines
+        if num_lines > 1 :
+            logger.info(f"Service is running")
+            
+            # Do something if the file has three lines
+        #else:
+        #    logger.error(f"Service is installed with some issue.Check installlog_{timestamp}_{OS}")  
+        #    # Do something else if the file does not have three lines
+
+    except FileNotFoundError:
+        print(f"Error: The file {file_path} not found.")
+    except subprocess.CalledProcessError as e:
+        print(f"Error: The command returned a non-zero exit status. Output: {e.output}")
+
 
 class HTMLFormatter(logging.Formatter):
     def format(self, record):
@@ -40,11 +65,25 @@ def is_pingable(ip_address):
         if result.returncode == 0:
             return True
         else:
-            raise PingError(f"The IP address {ip_address} is not reachable.")
+            return False
+        #    raise PingError(f"The IP address {ip_address} is not reachable.")
+        
     except subprocess.TimeoutExpired:
-        raise PingError(f"Timed out while trying to ping {ip_address}.")
+        logger.error(f"Timed out while trying to ping {ip_address}.")
+        #raise PingError(f"Timed out while trying to ping {ip_address}.")
     except Exception as e:
-        raise PingError(f"Error occurred while pinging {ip_address}: {e}")
+        logger.error(f"Error occurred while pinging {ip_address}: {e}")
+        #raise PingError(f"Error occurred while pinging {ip_address}: {e}")
+
+def timeout(n):
+    try:
+        # Run the subprocess with a timeout of 3 seconds
+        result = subprocess.run(['your_command', 'arg1', 'arg2'], timeout=n, capture_output=True, text=True)
+        print(result.stdout)
+    except subprocess.TimeoutExpired:
+        print("The command timed out after 3 seconds.")
+    except subprocess.CalledProcessError as e:
+        print(f"An error occurred while running the command: {e}")
 
 def ssh_into_server(username, ip, password):
     try:
@@ -106,9 +145,9 @@ def execute_remote_commands(ssh_client, command,sudo_password=None):
                 print(f"Command output on the remote server:")
                 print("".join(output))
 
-            if error:
-                print(f"Command error on the remote server:")
-                print("".join(error))
+            #if error:
+            #    print(f"Command error on the remote server:")
+            #    print("".join(error))
 
     except paramiko.SSHException as e:
         logger.error(f"SSH error occurred while executing the commands: {str(e)}")
@@ -117,6 +156,25 @@ def execute_remote_commands(ssh_client, command,sudo_password=None):
 
 def close_ssh_connection(ssh_client):
     ssh_client.close()
+
+def check_status_service(file_path):
+    try:
+        # Read the content of the file
+        with open(file_path, 'r') as file:
+            file_content = file.read()
+
+        # Check if the desired string is present in the file content
+        if "active (running)" in file_content:
+            logger.info(f"Systemctl EPSecClient.Service is running")
+        #else :
+        #    logger.error(f"Service is installed with some issue.Check installlog_{timestamp}_{OS}")
+        #    print("The file contains 'active (running)'.")
+        #    #Do something if the file contains the string 'active (running)'
+        
+    except FileNotFoundError:
+        print(f"Error: The file {file_path} not found.")
+    except Exception as e:
+        print(f"Error occurred while reading the file {file_path}: {str(e)}")
 
 def upload_file(ssh_client, local_path, remote_path):
     try:
@@ -133,12 +191,12 @@ def upload_file(ssh_client, local_path, remote_path):
     finally :
         sftp_client.close()
     
-
 def download_file(ssh_client, remote_path, local_path):
     try:
         sftp_client = ssh_client.open_sftp()
         sftp_client.get(remote_path, local_path)
         sftp_client.close()
+        
         logger.info(f"File {remote_path} downloaded to {local_path} from the remote server.")
     
     except FileNotFoundError:
@@ -151,16 +209,25 @@ def download_file(ssh_client, remote_path, local_path):
         sftp_client.close()
 
 #def read_commands_from_file(file_path):
-    commands = []
-    try:
-        with open(file_path, 'r') as cmd_file:
-            for line in cmd_file:
-                commands.append(line.strip())
-
-    except FileNotFoundError as e:
-        logger.error(f"{file_path} not found. No additional commands will be executed.")
-    
-    return commands
+#    commands = []
+#    try:
+#        with open(file_path, 'r') as cmd_file:
+#            for line in cmd_file:
+#                commands.append(line.strip())
+#
+#    except FileNotFoundError as e:
+#       logger.error(f"{file_path} not found. No additional commands will be executed.")
+#    
+#   return commands
+def create_folder_if_not_exists(folder_path):
+    # Check if the folder exists
+    if not os.path.exists(folder_path):
+        try:
+            # Create the folder
+            os.makedirs(folder_path)
+            print(f"Folder created at {folder_path}")
+        except OSError as e:
+            print(f"Error occurred while creating the folder: {str(e)}")
 
 def main():
     file_path = "/home/testubuntu/testing_client/python_script/server_list.txt"  # Replace with the path to your file containing username, IP, and passwords.
@@ -213,12 +280,15 @@ def main():
             for line in file:
                 OS, username, ip, password = line.strip().split(",")
                 logger.info(f"Testing on {OS} flavour")
-
+                logger.info(f"Creating local folder for storage of {OS} service logs")
+                create_folder_if_not_exists('/home/testubuntu/testing_client/python_script/buffer/'+OS)
                 logger.info(f"Testing Reachability on {ip}")
                 reachable = is_pingable(ip)
-                logger.info(f"IP {ip} is reachable")
-
-                logger.info(f"Connecting to {username}@{ip}")
+                if reachable :
+                    logger.info(f"IP {ip} is reachable")
+                    logger.info(f"Connecting to {username}@{ip}")
+                else:
+                    logger.info(f"The IP address {ip} is not reachable.")
 
                 ssh_client = ssh_into_server(username, ip, password)
 
@@ -247,6 +317,7 @@ def main():
                     #commands_to_execute_part1.clear()
                     #print(commands_to_execute_part1)
                     cmd = "chmod +x /home/"+username+"/test/atirwraplinux.sh"
+
                     execute_remote_commands(ssh_client,cmd,password)
                     #commands_to_execute_part1.append(cmd)
                     #print(commands_to_execute_part1)
@@ -254,19 +325,64 @@ def main():
 
                     counter += 1
                     logger.info(f"Executing {counter}. command which Run the script on remote {OS} server.")
-                    cmd = "bash /home/"+username+"/test/atirwraplinux.sh -ia -service -v > /home/"+username+"/test/installlog_"+OS
+                    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+                    cmd = "bash /home/{username}/test/atirwraplinux.sh -ia -service -v > /home/"+username+"/test/installlog_"+timestamp+"_"+OS
                     #commands_to_execute_part1.append(cmd)
                     #print(commands_to_execute_part1)
                     #print(cmd)
-                    execute_remote_commands(ssh_client, cmd, password)
+                    execute_remote_commands(ssh_client, cmd,password)
+                    #timeout(3)
 
+                    # Download logs 
                     counter += 1
                     logger.info(f"Executing {counter}. command which download logs from remote {OS} server.")
-                    # Download logs 
-                    local_file = "/home/"+username+"/test/installlog_"+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
-                    remote_file = "/home/testubuntu/testing_client/python_script/logs/installlog_"+OS
-                    download_file(ssh_client,local_file,remote_file)
+                    remote_path = "/home/"+username+"/test/installlog_"+timestamp+"_"+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
+                    local_path = "/home/testubuntu/testing_client/python_script/logs/installlog_"+timestamp+"_"+OS
+                    download_file(ssh_client,remote_path,local_path)
+                    
+                    # 6.1
+                    counter +=1 
+                    sub_counter = 1
+                    logger.info(f"Executing {counter}. command to perform some testing on remote {OS} server.")
+                    logger.info(f"Executing {counter}.{sub_counter} command to perform basic testing whether the service is running on remote {OS} server.")
+                    cmd = 'ps -ef | grep "EPSecClient" > '
+                    cmd += '/home/'+username+'/test/top_service_running_'+timestamp+'_'+OS
+                    execute_remote_commands(ssh_client,cmd)
+                    remote_path = '/home/'+username+'/test/top_service_running_'+timestamp+'_'+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
+                    local_path = "/home/testubuntu/testing_client/python_script/buffer/"+OS+"/top_service_running_"+timestamp+"_"+OS
+                    download_file(ssh_client,remote_path,local_path)
+                    check_number_of_lines(local_path)
+                    
+                    #6.2
+                    sub_counter += 1
+                    logger.info(f"Executing {counter}.{sub_counter} command to perform basic testing to check the service status on remote {OS} server.")
+                    cmd = 'systemctl status EPSecClient > /home/'+username+'/test/status_service_running_'+timestamp+'_'+OS
+                    execute_remote_commands(ssh_client,cmd)
+                    remote_path = "/home/"+username+"/test/status_service_running_"+timestamp+"_"+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
+                    local_path = "/home/testubuntu/testing_client/python_script/buffer/"+OS+"/status_service_running_"+timestamp+"_"+OS
+                    download_file(ssh_client,remote_path,local_path)
+                    check_status_service(local_path)
+                    
+                    # 6.3
+                    sub_counter += 1
+                    logger.info(f"Executing {counter}.{sub_counter} command to perform feature testing like DNS trace on remote {OS} server.")
+                    cmd = "cat /etc/hosts > /home/"+username+"/test/dns_"+timestamp+"_"+OS
+                    execute_remote_commands(ssh_client,cmd)
+                    remote_path = "/home/"+username+"/test/dns_"+timestamp+"_"+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
+                    local_path = "/home/testubuntu/testing_client/python_script/buffer/"+OS+"/dns_"+timestamp+"_"+OS
+                    download_file(ssh_client,remote_path,local_path)
+                    check_number_of_lines(local_path)
 
+                    # 6.4
+                    sub_counter += 1
+                    logger.info(f"Executing {counter}.{sub_counter} command to perform feature testing like OpenSSH trace on remote {OS} server.")
+                    cmd = 'cat ~/.ssh/known_hosts > /home/'+username+"/test/openssh_"+timestamp+"_"+OS
+                    execute_remote_commands(ssh_client,cmd)
+                    remote_path = "/home/"+username+"/test/openssh_"+timestamp+"_"+OS  # "/home/remote_user/remote_file.txt"  # Replace with the remote file to download
+                    local_path = "/home/testubuntu/testing_client/python_script/buffer/"+OS+"/openssh_"+timestamp+"_"+OS
+                    download_file(ssh_client,remote_path,local_path)
+                    check_number_of_lines(local_path)
+                    
                     counter +=1 
                     logger.info(f"Executing {counter}. command which remove the directory on remote {OS} server.")
                     #commands_to_execute_part1.clear()
@@ -277,6 +393,10 @@ def main():
                     counter += 1
                     logger.info(f"Executing {counter}. command closing ssh connection with remote {OS} server.")
                     close_ssh_connection(ssh_client)
+
+                    logger.info(f"-----------Next Server I---------")
+                    #timeout(3)
+
 
     except PingError as e:
         logger.error(f"IP:{ip} not reachable")
