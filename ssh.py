@@ -454,7 +454,32 @@ def failed_parsing(input_file_path, output_file_path):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
+def final_status(input_file_path, output_file_path):
+    try:
+        # Open the input file for reading
+        with open(input_file_path, "r") as input_file:
+            lines = input_file.readlines()
+
+            # Extract VM names and corresponding statuses (Pass/Fail)
+            status_lines = []
+            for line in lines:
+                if "Successfull testing on remote" in line:
+                    status_lines.append("Pass: " + line.split("Successfull testing on remote ")[-1].strip())
+                elif "ERROR" in line:
+                    status_lines.append("Fail: " + line.split("ERROR")[-1].strip())
+
+        # Write status lines to the common output file
+        with open(output_file_path, "w") as output_file:
+            output_file.write("\n".join(status_lines))
+
+        print("Extraction completed successfully.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+
+
 if __name__ == "__main__":
     main()
-    success_parsing("ssh_script_logs.log","Success_Output.log")
-    failed_parsing("ssh_script_logs.log","Failure_Output.log")
+    #success_parsing("ssh_script_logs.log","Success_Output.log")
+    #failed_parsing("ssh_script_logs.log","Failure_Output.log")
+    final_status("ssh_script_logs.log","Final_Output.log")
