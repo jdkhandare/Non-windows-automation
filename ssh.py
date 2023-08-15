@@ -49,6 +49,20 @@ formatter = HTMLFormatter()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+# def log_success(message):
+#     logger.log(logging.SUCCESS, message)
+
+# def log_fail(message):
+#     logger.log(logging.FAIL, message)
+
+# # Adding new logging levels to the logging module
+# logging.SUCCESS = 25  # You can choose a numeric value not already used by standard levels
+# logging.addLevelName(logging.SUCCESS, 'SUCCESS')
+
+# logging.FAIL = 35     # Another custom level
+# logging.addLevelName(logging.FAIL, 'FAIL')
+
+
 # Test logging
 #logger.warning('This is a warning message.')
 #logger.error('This is an error message.')
@@ -288,7 +302,7 @@ def main():
                     logger.info(f"IP {ip} is reachable")
                     logger.info(f"Connecting to {username}@{ip}")
                 else:
-                    logger.info(f"The IP address {ip} is not reachable.")
+                    logger.error(f"The IP address {ip} of {OS} machine is not reachable.")
 
                 ssh_client = ssh_into_server(username, ip, password)
 
@@ -394,6 +408,7 @@ def main():
                     logger.info(f"Executing {counter}. command closing ssh connection with remote {OS} server.")
                     close_ssh_connection(ssh_client)
 
+                    logger.info(f"Successfull testing on remote {OS} server.")
                     logger.info(f"-----------Next Server I---------")
                     #timeout(3)
 
@@ -405,5 +420,41 @@ def main():
     except Exception as e:
         logger.error(f"An error occurred while processing the file: {str(e)}")
 
+def success_parsing(input_file_path, output_file_path):
+    try:
+        # Open the input file for reading
+        with open(input_file_path, "r") as input_file:
+            lines = input_file.readlines()
+
+            # Loop through the lines and check for the target text
+            successful_lines = [line for line in lines if "Successfull testing on remote" in line]
+
+        # Create the output file and write matching lines
+        with open(output_file_path, "w") as output_file:
+            output_file.writelines(successful_lines)
+
+        print("Extraction completed successfully.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+def failed_parsing(input_file_path, output_file_path):
+    try:
+        # Open the input file for reading
+        with open(input_file_path, "r") as input_file:
+            lines = input_file.readlines()
+
+            # Loop through the lines and check for "ERROR"
+            error_lines = [line for line in lines if "ERROR" in line]
+
+        # Create the output file and write error lines
+        with open(output_file_path, "w") as output_file:
+            output_file.writelines(error_lines)
+
+        print("Extraction completed successfully.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
 if __name__ == "__main__":
     main()
+    success_parsing("ssh_script_logs.log","Success_Output.log")
+    failed_parsing("ssh_script_logs.log","Failure_Output.log")
