@@ -1,6 +1,7 @@
 Debian10,debian,10.0.46.144,Jay@8210
-CentOS6.5,centos6.5,10.0.93.12,jay@8210
-CentOS7.3,centos7,10.0.143.92,jay@8210
+CentOS6.5,centos6.5,10.0.93.12,Jay@8210
+CentOS7.0,centos,10.0.142.53,Jay@8210
+CentOS7.3,centos7,10.0.143.92,Jay@8210
 Ubuntu20,dummy,10.0.155.215,Jay@8210
 Ubuntu18,ubuntu18,10.0.110.120,Jay@8210
 Ubuntu1604,ubuntu1604,10.0.79.34,Jay@8210
@@ -9,4 +10,3 @@ RHEL6,rhel6_64,10.0.157.185,Jay@8210
 RHEL7.4,rhel7.4_64bit,10.0.70.132,Jay@8210
 RHEL7.5,rhel7.5_64bit,10.0.64.2,Jay@8210
 RHEL8.0,rhel80_64bit,10.0.82.95,Jay@8210
-Debian10-fake,debian,10.0.46.154,Jay@8210
