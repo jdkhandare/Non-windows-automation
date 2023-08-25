@@ -1,0 +1,2 @@
+CentOS6.5,centos6.5,10.0.93.12,Jay@8210
+CentOS7.0,centos,10.0.142.53,Jay@8210
